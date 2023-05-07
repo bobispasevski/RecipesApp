@@ -1,0 +1,141 @@
+const User = require('../models/user');
+const jwt = require('jsonwebtoken');
+const fs = require("fs");
+require('dotenv').config();
+
+module.exports = {
+    postUser: async (req, res) => {
+        try {
+            req.body.email = req.body.email.toLowerCase();
+            let user = await User.findOne({ email: req.body.email })
+            if (user) {
+                throw new Error('This email is already taken !')
+            } else {
+                req.body.image = "/images/users/avatar.png";
+                await User.create(req.body)
+            }
+            res.send({
+                err: false,
+                message: "User created",
+                user: user
+            })
+        }
+        catch (err) {
+            res.send({
+                err: true,
+                message: err.message
+            });
+        }
+    },
+    postLogin: async (req, res) => {
+        try {
+            req.body.email = req.body.email.toLowerCase();
+            user = await User.findOne({ email: req.body.email });
+            if (!user) {
+                throw new Error('Invalid credentials');
+            }
+            const payload = {
+                id: user._id,
+                email: user.email,
+                first_name: user.first_name
+            }
+            token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "30m" });
+            res.send({
+                err: false,
+                message: "User logged in ",
+                token: token,
+                userPW: user.password
+            });
+        }
+        catch (err) {
+            res.send({
+                err: true,
+                message: err.message
+            });
+        }
+    },
+    getUser: async (req, res) => {
+        try {
+            user = await User.findById(req.user.id)
+            res.send({
+                err: false,
+                message: `Info for user`,
+                user: user
+            })
+        }
+        catch (err) {
+            res.send({
+                err: true,
+                message: err.message
+            })
+        }
+    },
+    postUpdate: async (req, res) => {
+        try {
+            user = await User.findById(req.user.id)
+            req.body.email = req.body.email.toLowerCase();
+            if (req.file) {
+                req.body.image = `images/users/${req.file.filename}`;
+            } else {
+                req.body.image = user.image
+            }
+            user = await User.findByIdAndUpdate(req.user.id, req.body)
+            res.send({
+                err: false,
+                message: `Updated user`
+            })
+        }
+        catch (err) {
+            if (req.file){
+                fs.unlinkSync(`public/images/users/${req.file.filename}`)
+            }
+                res.send({
+                    err: true,
+                    message: err.message
+                })
+        }
+    }
+    // deleteUser: async (req, res) => {
+    //     try {
+    //         const payload = {
+    //             id: req.user.id
+    //         }
+    //         token = jwt.sign(payload, process.env.JWT_SECRET, {
+    //             expiresIn: '1s'
+    //         })
+    //         await User.findByIdAndDelete(req.user.id)
+    //         res.send({
+    //             err: false,
+    //             message: "User Deleted",
+    //             token: token
+    //         });
+    //     }
+    //     catch (err) {
+    //         res.send({
+    //             err: true,
+    //             message: err.message
+    //         })
+    //     }
+    // },
+    // putLogout: async (req, res) => {
+    //     try {
+    //         const payload = {
+    //             id: req.user.id
+    //         }
+    //         token = jwt.sign(payload, process.env.JWT_SECRET, {
+    //             expiresIn: '1s'
+    //         })
+    //         res.send({
+    //             err: false,
+    //             message: "User Deleted",
+    //             token: token
+    //         });
+    //     }
+    //     catch (err) {
+    //         res.send({
+    //             err: true,
+    //             message: err.message
+    //         })
+    //     }
+    // }
+}
